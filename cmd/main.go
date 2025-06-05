@@ -1,36 +1,51 @@
 package main
 
 import (
-	"github.com/gofiber/fiber/v2"
-	"gitlab.com/imagyn_go/internal/application/example/usecases"
-	"gitlab.com/imagyn_go/internal/domain/example"
-	"gitlab.com/imagyn_go/internal/infrastructure/config"
-	"gitlab.com/imagyn_go/internal/infrastructure/persistence/postgres"
-	"gitlab.com/imagyn_go/internal/interface/http"
+	"fmt"
 	"log"
+	"time"
+
+	"imagyn_go/internal/application/image/usecases"
+	"imagyn_go/internal/infrastructure/config"
+	"imagyn_go/internal/infrastructure/thirdparty"
+	"imagyn_go/internal/interfaces/http"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 )
 
 func main() {
-	dbConfig := config.NewDatabaseConfig()
-	dbProvider, err := postgres.NewDatabaseProvider(dbConfig)
-	if err != nil {
-		log.Fatalf("Failed to connect database: %v", err)
-	}
+	cfg := config.LoadConfig()
+
 	app := fiber.New()
 
-	// Repositories
-	exampleRepo := postgres.NewExampleRepository(dbProvider.GetDB())
+	// Initialize third-party client
+	modelClient := thirdparty.NewModelClient(cfg.BaseURLModel, cfg.BearerTokenModel)
 
-	// Services
-	exampleService := example.NewExampleService()
+	// Initialize use cases
+	generateImageUseCase := usecases.NewGenerateImageUseCase(modelClient)
 
-	// Use cases
-	createUC := usecases.NewExampleUseCase(exampleRepo, exampleService)
+	// Initialize handlers
+	imageHandler := http.NewImageHandler(generateImageUseCase)
 
-	// HTTP handlers
-	api := app.Group("/api/v1")
-	http.NewExampleHandler(api, &createUC)
+	// API V1 Group
+	apiV1 := app.Group("/api/v1")
 
-	log.Fatal(app.Listen(":3000"))
+	// Apply rate limiting to the image generation route
+	apiV1.Post("/image/generate", limiter.New(limiter.Config{
+		Max:        cfg.RateLimitPerMinute,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP() // Limit by IP address
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Rate limit exceeded. Please try again in 1 minute.",
+			})
+		},
+	}), imageHandler.GenerateImage)
 
+	// Start server
+	log.Printf("Server starting on port %s", cfg.Port)
+	log.Fatal(app.Listen(fmt.Sprintf(":%s", cfg.Port)))
 }

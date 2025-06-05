@@ -11,7 +11,7 @@ A high-performance web API built with Go Fiber framework.
 
 1. Clone the repository
 ```bash
-git clone https://gitlab.com/imagyn_go.git
+git clone https://github.com/tinoimammp/imagyn_go.git
 cd imagyn_go
 ```
 2. Install dependencies using make command
