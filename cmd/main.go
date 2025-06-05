@@ -5,10 +5,10 @@ import (
 	"log"
 	"time"
 
-	"imagyn_go/internal/application/image/usecases"
-	"imagyn_go/internal/infrastructure/config"
-	"imagyn_go/internal/infrastructure/thirdparty"
-	"imagyn_go/internal/interfaces/http"
+	"github.com/tinoimammp/imagyn_go/internal/application/image/usecases"
+	"github.com/tinoimammp/imagyn_go/internal/infrastructure/config"
+	"github.com/tinoimammp/imagyn_go/internal/infrastructure/thirdparty"
+	"github.com/tinoimammp/imagyn_go/internal/interface/http"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"

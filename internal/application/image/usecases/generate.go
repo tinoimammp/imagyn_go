@@ -41,8 +41,9 @@ func (uc *GenerateImageUseCase) Execute(ctx context.Context, reqDTO *dto.Generat
 		return nil, fmt.Errorf("failed to generate image from model: %w", err)
 	}
 
+	// Correctly extract the b64_json from the first item in the Data array
 	respDTO := &dto.GenerateImageResponseDTO{
-		ImageBase64: domainResp.ImageBase64,
+		ImageBase64: domainResp.Data[0].B64JSON, // FIX APPLIED HERE
 	}
 
 	return respDTO, nil
